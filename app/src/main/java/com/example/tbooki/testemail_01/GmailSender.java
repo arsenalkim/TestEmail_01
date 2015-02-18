@@ -1,5 +1,7 @@
 package com.example.tbooki.testemail_01;
 
+import android.os.Environment;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,12 +10,17 @@ import java.util.Properties;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.BodyPart;
 import javax.mail.Message;
+import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 /**
  * Created by Tbooki on 2015-02-17.
@@ -21,6 +28,9 @@ import javax.mail.internet.MimeMessage;
 public class GmailSender extends javax.mail.Authenticator {
     private static final String SMTP_HOST_NAME = "smtp.gmail.com";
     private static final String SMTP_HOST_PORT = "465";     // SMTPS (over SSL)
+
+    private static final String PICFOLDER = "TestCameraJi";
+    private static String mRootPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + PICFOLDER;
 
     private final String user;
     private final String password;
@@ -32,7 +42,6 @@ public class GmailSender extends javax.mail.Authenticator {
 
         Properties props = new Properties();
         props.setProperty("mail.transport.protocol", "smtps");
-
         props.setProperty("mail.host", SMTP_HOST_NAME);
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.port", SMTP_HOST_PORT);
@@ -55,15 +64,42 @@ public class GmailSender extends javax.mail.Authenticator {
         MimeMessage message = new MimeMessage(session);
 
         message.setSender(new InternetAddress(sender));
-        message.setSubject(subject);
-		message.setText(body);
-        DataHandler handler = new DataHandler(new ByteArrayDataSource(body.getBytes(), "text/plain"));
-        message.setDataHandler(handler);
         if (recipients.indexOf(',') > 0)
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipients));
         else
             message.setRecipient(Message.RecipientType.TO, new InternetAddress(recipients));
+        message.setSubject(subject);
+
+//		message.setText(body);
+//      DataHandler handler = new DataHandler(new ByteArrayDataSource(body.getBytes(), "text/plain"));
+//      message.setDataHandler(handler);
+
+        BodyPart messageBodyPart = new MimeBodyPart();
+        messageBodyPart.setText(body);
+        Multipart multipart = new MimeMultipart();
+        multipart.addBodyPart(messageBodyPart);
+
+        String filename_00 = mRootPath + "/" + "00.jpg";
+        String filename_01 = mRootPath + "/" + "01.jpg";
+
+        // One attachment - jpg
+        messageBodyPart = new MimeBodyPart();
+        DataSource source = new FileDataSource(filename_00);
+        messageBodyPart.setDataHandler(new DataHandler(source));
+        messageBodyPart.setFileName(filename_00);
+        multipart.addBodyPart(messageBodyPart);
+
+        // Two attachment - jpg
+        messageBodyPart = new MimeBodyPart();
+        source = new FileDataSource(filename_01);
+        messageBodyPart.setDataHandler(new DataHandler(source));
+        messageBodyPart.setFileName(filename_01);
+        multipart.addBodyPart(messageBodyPart);
+
+        message.setContent(multipart);
+
         Transport.send(message);
+
         return true;
     }
 
